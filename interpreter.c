@@ -1,151 +1,100 @@
 #include "monty.h"
 
+
 /**
- * mod - computes rest of division of second element by top element
- * @head: double pointer to top element of the stack
- * @line_number: current line we are at in the file
- * @token: the number of arguments and the arguments themself
+ * get_op_func -  selects the correct function to
+ * perform the operation asked by the commad
+ * @command: input string
+ * Return: pointer to a function
  */
-void mod(stack_t **head, unsigned int line_number, code_args_t token)
+void (*get_op_func(char *command))(stack_t **, unsigned int, code_args_t)
 {
-	stack_t *_head = *head, *tmp = NULL;
+	instruction_t ops[] = {
+		{"push", push},
+		{"pall", pall},
+		{"pint", pint},
+		{"pop", pop},
+		{"swap", swap},
+		{"add", add},
+		{"nop", nop},
+		{"sub", sub},
+		{"div", div_m},
+		{"mul", mult},
+		{"mod", mod},
+		{"pchar", pchar},
+		{"pstr", pstr},
+		{"rotl", rotl},
+		{"rotr", rotr},
+		{"queue", queue},
+		{"stack", stack},
+	};
+	int i = 0;
+	const int num_of_cmds = 17; /*Number of commands in ops*/
 
-	if (token.args)
-		free(token.args);
-	/*check if there are nodes to be divided*/
-	if (!_head)
-	{
-		dprintf(2, "L%u: can't mod, stack too short\n", line_number);
-		exit(EXIT_FAILURE);
-	}
-	if (!(_head->next))
-	{
+	/*Handle incase the line is comment*/
+	if (command[0] == '#')
+		return (nop);
+	/*Handle the case incase the line is empty*/
+	if (!strcmp(command, "\n"))
+		return (nop);
 
-		dprintf(2, "L%u: can't mod, stack too short\n", line_number);
-		exit(EXIT_FAILURE);
-	}
-	/*Handle division by zero*/
-	if (_head->n == 0)
+	while (i < num_of_cmds)
 	{
-
-		dprintf(2, "L%u: division by zero\n", line_number);
-		exit(EXIT_FAILURE);
+		if (strcmp(ops[i].opcode, command) == 0)
+			return (ops[i].func);
+		i++;
 	}
-	/*
-	*Find the division of the second node by the
-	*first node and store it in the second node
-	*/
-	_head->next->n = _head->next->n % _head->n;
-	/*
-	*Remove the top node after storing the
-	*dividend in the second and move the head
-	*/
-	tmp = _head->next;
-	_head->next->prev = NULL;
-	free(_head);
-	*head = tmp;
+
+	return (NULL);
 }
 
-
-
 /**
- * pchar - prints character at top of stack followed by new line
- * @head: double pointer to top element of the stack
- * @line_number: current line we are at in the file
- * @token: the number of arguments and the arguments themself
+ * interpret - iterprets a singe line code
+ * according the rules  specified by the monty
+ * language
+ * @line: a string holding a command
+ * @line_number: the line number where the string is found
+ * @head: a double pointer to the stack holding all the
+ * information about the program
  */
-void pchar(stack_t **head, unsigned int line_number, code_args_t token)
+void interpret(char *line, int line_number, stack_t **head)
 {
+	char *cmd = NULL, *tmp = NULL, *opcode = NULL;
+	void (*func)(stack_t **, unsigned int, code_args_t) = NULL;
+	code_args_t token;
 
-	stack_t *_head = *head;
-
-	if (token.args)
-		free(token.args);
-	/*Incase there is no node to be printed*/
-	if (!_head)
+	trims(&cmd, line);
+	token.argc = 0, token.args = NULL;
+	/* remove new line character if its length is more than */
+	if (strlen(cmd) > 1)
+		cmd[strlen(cmd) - 1] = '\0';
+	/*Parse the command name and the arguments into the token*/
+	tmp = strtok(cmd, " ");
+	opcode = _strdup(tmp);
+	tmp = strtok(NULL, " ");
+	if (tmp)
 	{
-		dprintf(2, "L%u: can't pchar, stack empty\n", line_number);
+		token.args = _strdup(tmp);
+		token.argc += 1;
+		tmp = strtok(NULL, " ");
+		if (tmp)
+			token.argc += 1;
+	}
+	free(cmd);
+	/*Get the corrspondng fuction to the opcode and callit*/
+	func = get_op_func(opcode);
+	if (func)
+	{
+		free(opcode);
+		func(head, line_number, token);
+	}
+	else
+	{
+		/*print an error in the case where there is no commad  the opcode*/
+		dprintf(2, "L%u: unknown instruction %s\n", line_number, opcode);
+		free(opcode);
+		if (token.args)
+			free(token.args);
 		exit(EXIT_FAILURE);
-
 	}
-	/*handle if isn't a non printable character*/
-	if (_head->n < 0 || _head->n > 127)
-	{
-
-		dprintf(2, "L%u: can't pchar, value out of range\n", line_number);
-		exit(EXIT_FAILURE);
-	}
-	/*if everything went well print to stdout*/
-	printf("%c\n", _head->n);
-}
-
-
-/**
- * pstr - prints string starting at top of stack followed by new line
- * @head: double pointer to top element of the stack
- * @line_number: current line we are at in the file
- * @token: the number of arguments and the arguments themself
- */
-void pstr(stack_t **head, unsigned int line_number, code_args_t token)
-{
-	stack_t *_head = *head;
-
-	if (token.args)
-		free(token.args);
-	(void)(line_number);
-	/*
-	*print everything in the linked list unless
-	* it's value is a zero,
-	* it's is empty (has reached to the end)
-	* The value of the element isn't in stack
-	*/
-	while (_head)
-	{
-		if (_head->n < 0 || _head->n > 127 || _head->n == 0)
-			break;
-		printf("%c", _head->n);
-		_head = _head->next;
-	}
-	/*Print a new line in the end*/
-	printf("\n");
-}
-
-
-/**
- * rotl - rotates the stack to the top
- * @head: double pointer to top element of the stack
- * @line_number: current line we are at in the file
- * @token: the number of arguments and the arguments themself
- */
-void rotl(stack_t **head, unsigned int line_number, code_args_t token)
-{
-	stack_t *_head = *head, *top = *head, *second = NULL;
-
-	if (token.args)
-		free(token.args);
-	(void)(line_number);
-
-	if (!_head)
-		return;
-	if (!(_head->next))
-		return;
-	/*Get the second top element*/
-	second = _head->next;
-
-	/*Go to the end of the list*/
-	while (_head->next)
-		_head = _head->next;
-
-	/*Bring the top to the last*/
-	_head->next = top;
-	/*set the last's previous to the proper value*/
-	top->prev = _head;
-	/*set the previous of the second to NULL since it is now top*/
-	second->prev = NULL;
-
-	/*detach the top form its old position*/
-	top->next = NULL;
-
-	/*Make the head point to second*/
-	*head = second;
 }
