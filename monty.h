@@ -58,10 +58,5 @@ void sub(stack_t **stack, unsigned int line_number);
 void div_(stack_t **stack, unsigned int line_number);
 void mul(stack_t **stack, unsigned int line_number);
 void mod(stack_t **stack, unsigned int line_number);
-void pchar(stack_t **, unsigned int, code_args_t);
-void pstr(stack_t **, unsigned int, code_args_t);
-void rotl(stack_t **, unsigned int, code_args_t);
-void rotr(stack_t **, unsigned int, code_args_t);
-void queue(stack_t **, unsigned int, code_args_t);
-void stack(stack_t **, unsigned int, code_args_t);
+
 #endif /* MONTY_H */
